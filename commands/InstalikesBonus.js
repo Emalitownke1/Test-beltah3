@@ -54,13 +54,20 @@ keith({
   reaction: '❤️'
 }, async (chatId, zk, context) => {
   const { ms, repondre, arg, auteurMessage } = context;
+  
+  console.log("Instalikes command triggered");
 
   // Get the user's phone number (sender)
   const userNumber = auteurMessage.split('@')[0];
 
   if (!arg[0]) {
-    return repondre(`*Usage:* .instalikes [Instagram post/reel URL]\n\nExample: .instalikes https://www.instagram.com/p/xxxxx`);
+    console.log("No URL provided");
+    await repondre(`*Usage:* .instalikes [Instagram post/reel URL]\n\nExample: .instalikes https://www.instagram.com/p/xxxxx`);
+    return;
   }
+  
+  // Log the received URL
+  console.log("Processing URL:", arg[0]);
 
   const instagramLink = arg[0];
 
@@ -83,8 +90,15 @@ keith({
   await repondre("*🔍 Validating your Instagram link...*");
 
   try {
+    await repondre("*🔄 Processing your request...*");
+    
     // Validate if link is accessible
-    const validateResponse = await axios.get(instagramLink);
+    const validateResponse = await axios.get(instagramLink, {
+      timeout: 10000,
+      validateStatus: function (status) {
+        return status >= 200 && status < 300;
+      }
+    });
     if (validateResponse.status !== 200) {
       return repondre("*❌ Error:* The Instagram link appears to be invalid or inaccessible.\nPlease ensure your account is public and the post exists.");
     }
