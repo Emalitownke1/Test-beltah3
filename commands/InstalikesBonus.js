@@ -23,14 +23,32 @@ const QUANTITY = 15;
 const getClaimedUsers = () => {
   try {
     if (!fs.existsSync(CLAIMED_USERS_FILE)) {
-      fs.writeFileSync(CLAIMED_USERS_FILE, JSON.stringify([]));
-      return [];
+      fs.writeFileSync(CLAIMED_USERS_FILE, JSON.stringify({ users: [], links: [] }));
+      return { users: [], links: [] };
     }
     const data = fs.readFileSync(CLAIMED_USERS_FILE, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    return {
+      users: parsed.users || [],
+      links: parsed.links || []
+    };
   } catch (error) {
     console.error('Error reading claimed users file:', error);
-    return [];
+    return { users: [], links: [] };
+  }
+};
+
+// Helper function to save claimed data
+const saveClaimedData = (user, link) => {
+  try {
+    const claimedData = getClaimedUsers();
+    claimedData.users.push(user);
+    claimedData.links.push(link);
+    fs.writeFileSync(CLAIMED_USERS_FILE, JSON.stringify(claimedData, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving claimed data:', error);
+    return false;
   }
 };
 
@@ -71,12 +89,17 @@ keith({
     return repondre("*Invalid Instagram link.* Please provide a valid public Instagram post or reel link.\n\nNote: Make sure your account is set to public in Instagram settings.");
   }
   
-  // Check if the user has already claimed the free likes
-  const claimedUsers = getClaimedUsers();
-  const alreadyClaimed = claimedUsers.some(user => user.number === userNumber);
+  // Check if the user or link has already been claimed
+  const claimedData = getClaimedUsers();
+  const userClaimed = claimedData.users.some(user => user.number === userNumber);
+  const linkClaimed = claimedData.links.some(link => link === instagramLink);
   
-  if (alreadyClaimed) {
+  if (userClaimed) {
     return repondre(`*You have already claimed your free likes bonus!* 🚫\n\nContact the owner at: wa.me/254704897825 for more information.`);
+  }
+
+  if (linkClaimed) {
+    return repondre(`*This Instagram link has already been used!* 🚫\n\nPlease provide a different Instagram post/reel link.`);
   }
   
   // Show processing message
@@ -100,13 +123,12 @@ keith({
     const data = response.data;
     
     if (data.order) {
-      // Save the user as claimed in the database
-      saveClaimedUser({
+      // Save both user and link as claimed in the database
+      saveClaimedData({
         number: userNumber,
-        link: instagramLink,
         orderId: data.order,
         date: new Date().toISOString()
-      });
+      }, instagramLink);
       
       // Send success message
       await zk.sendMessage(chatId, {
