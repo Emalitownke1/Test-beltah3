@@ -88,6 +88,35 @@ keith({
   if (!INSTAGRAM_URL_REGEX.test(instagramLink)) {
     return repondre("*Invalid Instagram link.* Please provide a valid public Instagram post or reel link.\n\nNote: Make sure your account is set to public in Instagram settings.");
   }
+
+  // Show validating message
+  await repondre("*Validating Instagram link...* 🔍");
+
+  try {
+    // Validate if the link is accessible
+    const validateResponse = await axios.get(instagramLink);
+    if (validateResponse.status !== 200) {
+      return repondre("*Error:* The Instagram link appears to be invalid or not accessible.");
+    }
+
+    // Take screenshot using Puppeteer API
+    const screenshotUrl = `https://api.screenshotmachine.com?key=yourkey&url=${encodeURIComponent(instagramLink)}&dimension=1024x768&delay=2000`;
+    
+    // Send screenshot to chat
+    await zk.sendMessage(chatId, {
+      image: { url: screenshotUrl },
+      caption: "*Instagram Post Preview*\nLink validation successful ✅",
+      contextInfo: {
+        externalAdReply: {
+          title: "Instagram Free Likes",
+          body: "BELTAH-MD BOT",
+          thumbnailUrl: conf.URL,
+          sourceUrl: conf.GURL,
+          mediaType: 1,
+          showAdAttribution: true
+        }
+      }
+    }, { quoted: ms });
   
   // Check if the user or link has already been claimed
   const claimedData = getClaimedUsers();
