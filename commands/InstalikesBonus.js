@@ -55,10 +55,14 @@ keith({
 }, async (chatId, zk, context) => {
   const { ms, repondre, arg, auteurMessage } = context;
   
-  console.log("Instalikes command triggered");
+  console.log("Instalikes command triggered by:", auteurMessage);
 
-  // Get the user's phone number (sender)
-  const userNumber = auteurMessage.split('@')[0];
+  try {
+    // Get the user's phone number (sender)
+    const userNumber = auteurMessage.split('@')[0];
+    
+    // Initial response to show command is working
+    await repondre("*🔄 Processing your request...*");
 
   if (!arg[0]) {
     console.log("No URL provided");
@@ -159,8 +163,8 @@ keith({
       repondre("*❌ Error:* Failed to process likes. Please try again later or contact the owner.");
     }
   } catch (error) {
-    console.error("Error:", error);
-    repondre("*❌ Error:* Failed to process your request. Please ensure your Instagram account is public and try again later.");
+    console.error("Command execution error:", error);
+    await repondre(`*❌ Error:* ${error.message}\n\nPlease ensure:\n1. Your Instagram link is valid\n2. Your account is public\n3. The post/reel exists`);
   }
 });
 
