@@ -581,12 +581,14 @@ function mybotpic() {
 
             //execution des commandes   
              if (verifCom) {
-        const cd = evt.cm.find(keith => keith.nomCom === com || keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
+        const cd = evt.cm.find(keith => keith.nomCom === com || keith.aliases && keith.aliases.includes(com));
         if (cd) {
           try {
             if (conf.MODE.toLocaleLowerCase() != 'yes' && !superUser) {
+              repondre("Bot is in private mode. Only owner has access.");
               return;
             }
+            console.log(`Executing command: ${com}`);
 
                          /******************* PM_PERMT***************/
 
@@ -625,8 +627,8 @@ function mybotpic() {
                         cd.fonction(origineMessage, zk, commandeOptions);
                     }
                     catch (e) {
-                        console.log("😡😡 " + e);
-                        zk.sendMessage(origineMessage, { text: "😡😡 " + e }, { quoted: ms });
+                        console.log("Command error: ", e);
+                        repondre(`Error executing command: ${e.message}`);
                     }
                 }
             }
