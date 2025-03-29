@@ -1,3 +1,4 @@
+
 const { keith } = require('../keizzah/keith');
 const axios = require('axios');
 const fs = require('fs');
@@ -12,7 +13,7 @@ const INSTAGRAM_URL_REGEX = /https:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/([^/
 
 // YoYoMedia API Configuration
 const API_URL = 'https://yoyomedia.in/api/v2';
-const API_KEY = process.env.YOYOMEDIA_API_KEY || conf.YOYOMEDIA_API_KEY;
+const API_KEY = process.env.YOYOMEDIA_API_KEY || conf.YOYOMEDIA_API_KEY || 'fe5714fe99697f402b7ebffb1a04336b7b197336b0f1fc466097e0afdfddee86';
 
 // Service ID and quantity for likes
 const SERVICE_ID = 11105;
@@ -26,7 +27,11 @@ const getClaimedUsers = () => {
       return { users: [], links: [] };
     }
     const data = fs.readFileSync(CLAIMED_USERS_FILE, 'utf-8');
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    return {
+      users: parsed.users || [],
+      links: parsed.links || []
+    };
   } catch (error) {
     console.error('Error reading claimed users file:', error);
     return { users: [], links: [] };
@@ -47,6 +52,20 @@ const saveClaimedData = (user, link) => {
   }
 };
 
+// Helper function to save a new claimed user
+const saveClaimedUser = (user) => {
+  try {
+    const claimedUsers = getClaimedUsers();
+    claimedUsers.push(user);
+    fs.writeFileSync(CLAIMED_USERS_FILE, JSON.stringify(claimedUsers, null, 2));
+    return true;
+  } catch (error) {
+    console.error('Error saving claimed user:', error);
+    return false;
+  }
+};
+
+// Main .instalikes command
 keith({
   nomCom: 'instalikes',
   aliases: ['freelikes', 'instagramlikes'],
@@ -54,111 +73,66 @@ keith({
   reaction: '❤️'
 }, async (chatId, zk, context) => {
   const { ms, repondre, arg, auteurMessage } = context;
-
-  console.log("Instalikes command triggered by:", auteurMessage);
-
-  try {
-    // Get the user's phone number (sender)
-    const userNumber = auteurMessage.split('@')[0];
-
-    // Initial response to show command is working
-    await repondre("*🔄 Processing your request...*");
-
+  
+  // Get the user's phone number (sender)
+  const userNumber = auteurMessage.split('@')[0];
+  
+  // Get the Instagram link from arguments
   if (!arg[0]) {
-    console.log("No URL provided");
-    await repondre(`*Usage:* .instalikes [Instagram post/reel URL]\n\nExample: .instalikes https://www.instagram.com/p/xxxxx`);
-    return;
+    return repondre(`*Usage:* .instalikes [Instagram post/reel URL]\n\nExample: .instalikes https://www.instagram.com/p/xxxxx`);
   }
-
-  // Log the received URL
-  console.log("Processing URL:", arg[0]);
-
+  
   const instagramLink = arg[0];
-
-  // STEP 1: Check if user has already claimed
-  const claimedData = getClaimedUsers();
-  if (claimedData.users.some(user => user.number === userNumber)) {
-    return repondre(`*❌ You have already claimed your free likes bonus!*\n\nContact the owner at: wa.me/254704897825 for more information.`);
-  }
-
-  // Validate Instagram link format
+  
+  // Validate the Instagram URL format
   if (!INSTAGRAM_URL_REGEX.test(instagramLink)) {
-    return repondre("*❌ Invalid Instagram Link Format!*\n\n*Required Format:*\nhttps://www.instagram.com/p/XXXXX\nhttps://www.instagram.com/reel/XXXXX\n\n*Note:*\n- Make sure your account is public\n- Link must be from a post or reel\n- Link must be complete and valid");
+    return repondre("*Invalid Instagram link.* Please provide a valid public Instagram post or reel link.\n\nNote: Make sure your account is set to public in Instagram settings.");
+  }
+  
+  // Check if the user or link has already been claimed
+  const claimedData = getClaimedUsers();
+  const userClaimed = claimedData.users.some(user => user.number === userNumber);
+  const linkClaimed = claimedData.links.some(link => link === instagramLink);
+  
+  if (userClaimed) {
+    return repondre(`*You have already claimed your free likes bonus!* 🚫\n\nContact the owner at: wa.me/254704897825 for more information.`);
   }
 
-  // Additional link validation
+  if (linkClaimed) {
+    return repondre(`*This Instagram link has already been used!* 🚫\n\nPlease provide a different Instagram post/reel link.`);
+  }
+  
+  // Show processing message
+  await repondre("*Processing your free likes request...* ⏳");
+  
   try {
-    const response = await axios.head(instagramLink);
-    if (response.status !== 200) {
-      return repondre("*❌ Invalid Instagram Link!*\n\n*Possible issues:*\n1. Post/Reel doesn't exist\n2. Account is private\n3. Content was deleted\n\nPlease check the link and try again.");
-    }
-  } catch (error) {
-    return repondre("*❌ Link Verification Failed!*\n\n*Error:* The provided Instagram link is not accessible.\n\n*Please ensure:*\n1. The link is correct\n2. Your account is public\n3. The post/reel still exists");
-  }
-
-
-  // Check if link was already used
-  if (claimedData.links.includes(instagramLink)) {
-    return repondre(`*❌ This Instagram link has already been used!*\n\nPlease provide a different Instagram post/reel link.`);
-  }
-
-  await repondre("*🔍 Validating your Instagram link...*");
-
-  try {
-    await repondre("*🔄 Processing your request...*");
-
-    // Validate if link is accessible
-    const validateResponse = await axios.get(instagramLink, {
-      timeout: 10000,
-      validateStatus: function (status) {
-        return status >= 200 && status < 300;
-      }
-    });
-    if (validateResponse.status !== 200) {
-      return repondre("*❌ Error:* The Instagram link appears to be invalid or inaccessible.\nPlease ensure your account is public and the post exists.");
-    }
-
-    // Get screenshot
-    const screenshotUrl = `https://api.screenshotmachine.com?key=${API_KEY}&url=${encodeURIComponent(instagramLink)}&dimension=1024x768`;
-
-    // Send screenshot preview
-    await zk.sendMessage(chatId, {
-      image: { url: screenshotUrl },
-      caption: "*✅ Instagram Post Verified!*\nProcessing your free likes...",
-      contextInfo: {
-        externalAdReply: {
-          title: "Instagram Free Likes",
-          body: "BELTAH-MD BOT",
-          thumbnailUrl: conf.URL,
-          sourceUrl: conf.GURL,
-          mediaType: 1,
-          showAdAttribution: true
-        }
-      }
-    }, { quoted: ms });
-
-    // STEP 3: Grant the offer
+    // Place the order via YoYoMedia API
     const formData = new URLSearchParams();
     formData.append('key', API_KEY);
     formData.append('action', 'add');
     formData.append('service', SERVICE_ID);
     formData.append('link', instagramLink);
     formData.append('quantity', QUANTITY);
-
+    
     const response = await axios.post(API_URL, formData, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
     });
-
-    if (response.data.order) {
-      // STEP 4: Save to claimed database
+    
+    const data = response.data;
+    
+    if (data.order) {
+      // Save both user and link as claimed in the database
       saveClaimedData({
         number: userNumber,
-        orderId: response.data.order,
+        orderId: data.order,
         date: new Date().toISOString()
       }, instagramLink);
-
+      
+      // Send success message
       await zk.sendMessage(chatId, {
-        text: `*🎉 Congratulations! Your free Instagram likes have been granted!*\n\n✅ Order ID: ${response.data.order}\n👤 Post: ${instagramLink}\n❤️ Quantity: ${QUANTITY} likes\n\nContact owner at: wa.me/254704897825 to purchase more likes!`,
+        text: `*🎉 Congratulations! You have received your free Instagram likes!*\n\n✅ Order ID: ${data.order}\n👤 For your Instagram post: ${instagramLink}\n❤️ Quantity: ${QUANTITY} likes\n\nContact owner at: wa.me/254704897825 for more information.`,
         contextInfo: {
           externalAdReply: {
             title: "Instagram Free Likes",
@@ -170,12 +144,14 @@ keith({
           }
         }
       }, { quoted: ms });
-    } else {
-      repondre("*❌ Error:* Failed to process likes. Please try again later or contact the owner.");
+      
+    } else if (data.error) {
+      repondre(`*Error:* ${data.error}\n\nPlease try again or contact the owner.`);
     }
+    
   } catch (error) {
-    console.error("Command execution error:", error);
-    await repondre(`*❌ Error:* ${error.message}\n\nPlease ensure:\n1. Your Instagram link is valid\n2. Your account is public\n3. The post/reel exists`);
+    console.error("Error placing order:", error);
+    repondre("*Error:* Failed to process your request. Please ensure your Instagram account is public and try again later.");
   }
 });
 
@@ -187,42 +163,43 @@ keith({
   reaction: '📋'
 }, async (chatId, zk, context) => {
   const { ms, repondre, superUser } = context;
-
+  
   // Only allow bot owner to use this command
   if (!superUser) {
     return repondre("*This command is restricted to the bot owner*");
   }
-
+  
   try {
     const claimedUsers = getClaimedUsers();
-
-    if (claimedUsers.users.length === 0) {
+    
+    if (claimedUsers.length === 0) {
       return repondre("*No users have claimed free likes yet.*");
     }
-
+    
     // Format the list of claimed users
     let message = `*Users Who Claimed Free Instagram Likes*\n\n`;
-    claimedUsers.users.forEach((user, index) => {
+    claimedUsers.forEach((user, index) => {
       message += `*${index + 1}. User:* ${user.number}\n`;
+      message += `   *Link:* ${user.link}\n`;
       message += `   *Order ID:* ${user.orderId}\n`;
       message += `   *Date:* ${new Date(user.date).toLocaleString()}\n\n`;
     });
-
-    message += `Total: ${claimedUsers.users.length} users`;
-
+    
+    message += `Total: ${claimedUsers.length} users`;
+    
     // Send the file as a document
     fs.writeFileSync('claimed-users-report.txt', message);
-
+    
     await zk.sendMessage(chatId, {
       document: fs.readFileSync('claimed-users-report.txt'),
       fileName: 'claimed-users-report.txt',
       mimetype: 'text/plain',
-      caption: `*Free Instagram Likes - Claimed Users Report*\n\nTotal: ${claimedUsers.users.length} users`
+      caption: `*Free Instagram Likes - Claimed Users Report*\n\nTotal: ${claimedUsers.length} users`
     }, { quoted: ms });
-
+    
     // Clean up temporary file
     fs.unlinkSync('claimed-users-report.txt');
-
+    
   } catch (error) {
     console.error("Error processing claimed users:", error);
     repondre("*Error:* Failed to retrieve the list of claimed users.");
