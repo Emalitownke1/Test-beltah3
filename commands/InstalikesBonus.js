@@ -84,19 +84,25 @@ keith({
   
   const instagramLink = arg[0];
   
+  // Initial response to show command is working
+  await repondre("*Processing your request...* 🔄");
+
   // Validate the Instagram URL format
   if (!INSTAGRAM_URL_REGEX.test(instagramLink)) {
-    return repondre("*Invalid Instagram link.* Please provide a valid public Instagram post or reel link.\n\nNote: Make sure your account is set to public in Instagram settings.");
+    return repondre("*Invalid Instagram link.* Please provide a valid public Instagram post or reel link.\n\nExample: https://www.instagram.com/p/xxxxx");
   }
 
-  // Show validating message
-  await repondre("*Validating Instagram link...* 🔍");
-
   try {
-    // Validate if the link is accessible
-    const validateResponse = await axios.get(instagramLink);
-    if (validateResponse.status !== 200) {
-      return repondre("*Error:* The Instagram link appears to be invalid or not accessible.");
+    // Check if the link is accessible
+    await repondre("*Validating Instagram link...* 🔍");
+    
+    try {
+      const validateResponse = await axios.get(instagramLink, {
+        timeout: 10000,
+        validateStatus: (status) => status === 200
+      });
+    } catch (error) {
+      return repondre("*Error:* The Instagram link appears to be invalid or not accessible. Make sure:\n\n1. The link is correct\n2. The post is public\n3. The post still exists");
     }
 
     // Take screenshot using Puppeteer API
@@ -180,7 +186,10 @@ keith({
     
   } catch (error) {
     console.error("Error placing order:", error);
-    repondre("*Error:* Failed to process your request. Please ensure your Instagram account is public and try again later.");
+    if (error.response && error.response.data && error.response.data.error) {
+      return repondre(`*Error:* ${error.response.data.error}`);
+    }
+    return repondre("*Error:* Unable to process your request at the moment. Please try again in a few minutes.");
   }
 });
 
