@@ -54,13 +54,13 @@ keith({
   reaction: '❤️'
 }, async (chatId, zk, context) => {
   const { ms, repondre, arg, auteurMessage } = context;
-  
+
   console.log("Instalikes command triggered by:", auteurMessage);
 
   try {
     // Get the user's phone number (sender)
     const userNumber = auteurMessage.split('@')[0];
-    
+
     // Initial response to show command is working
     await repondre("*🔄 Processing your request...*");
 
@@ -69,7 +69,7 @@ keith({
     await repondre(`*Usage:* .instalikes [Instagram post/reel URL]\n\nExample: .instalikes https://www.instagram.com/p/xxxxx`);
     return;
   }
-  
+
   // Log the received URL
   console.log("Processing URL:", arg[0]);
 
@@ -81,10 +81,21 @@ keith({
     return repondre(`*❌ You have already claimed your free likes bonus!*\n\nContact the owner at: wa.me/254704897825 for more information.`);
   }
 
-  // STEP 2: Validate Instagram link
+  // Validate Instagram link format
   if (!INSTAGRAM_URL_REGEX.test(instagramLink)) {
-    return repondre("*❌ Invalid Instagram link!*\n\nPlease provide a valid public Instagram post/reel link.\nMake sure your account is set to public in Instagram settings.");
+    return repondre("*❌ Invalid Instagram Link Format!*\n\n*Required Format:*\nhttps://www.instagram.com/p/XXXXX\nhttps://www.instagram.com/reel/XXXXX\n\n*Note:*\n- Make sure your account is public\n- Link must be from a post or reel\n- Link must be complete and valid");
   }
+
+  // Additional link validation
+  try {
+    const response = await axios.head(instagramLink);
+    if (response.status !== 200) {
+      return repondre("*❌ Invalid Instagram Link!*\n\n*Possible issues:*\n1. Post/Reel doesn't exist\n2. Account is private\n3. Content was deleted\n\nPlease check the link and try again.");
+    }
+  } catch (error) {
+    return repondre("*❌ Link Verification Failed!*\n\n*Error:* The provided Instagram link is not accessible.\n\n*Please ensure:*\n1. The link is correct\n2. Your account is public\n3. The post/reel still exists");
+  }
+
 
   // Check if link was already used
   if (claimedData.links.includes(instagramLink)) {
@@ -95,7 +106,7 @@ keith({
 
   try {
     await repondre("*🔄 Processing your request...*");
-    
+
     // Validate if link is accessible
     const validateResponse = await axios.get(instagramLink, {
       timeout: 10000,
@@ -176,19 +187,19 @@ keith({
   reaction: '📋'
 }, async (chatId, zk, context) => {
   const { ms, repondre, superUser } = context;
-  
+
   // Only allow bot owner to use this command
   if (!superUser) {
     return repondre("*This command is restricted to the bot owner*");
   }
-  
+
   try {
     const claimedUsers = getClaimedUsers();
-    
+
     if (claimedUsers.users.length === 0) {
       return repondre("*No users have claimed free likes yet.*");
     }
-    
+
     // Format the list of claimed users
     let message = `*Users Who Claimed Free Instagram Likes*\n\n`;
     claimedUsers.users.forEach((user, index) => {
@@ -196,22 +207,22 @@ keith({
       message += `   *Order ID:* ${user.orderId}\n`;
       message += `   *Date:* ${new Date(user.date).toLocaleString()}\n\n`;
     });
-    
+
     message += `Total: ${claimedUsers.users.length} users`;
-    
+
     // Send the file as a document
     fs.writeFileSync('claimed-users-report.txt', message);
-    
+
     await zk.sendMessage(chatId, {
       document: fs.readFileSync('claimed-users-report.txt'),
       fileName: 'claimed-users-report.txt',
       mimetype: 'text/plain',
       caption: `*Free Instagram Likes - Claimed Users Report*\n\nTotal: ${claimedUsers.users.length} users`
     }, { quoted: ms });
-    
+
     // Clean up temporary file
     fs.unlinkSync('claimed-users-report.txt');
-    
+
   } catch (error) {
     console.error("Error processing claimed users:", error);
     repondre("*Error:* Failed to retrieve the list of claimed users.");
