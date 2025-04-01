@@ -31,8 +31,12 @@ async function handleInvite(zk, ms, conf) {
       if (ms.message?.contactMessage) {
         const contact = ms.message.contactMessage;
         phoneNumber = contact.vcard?.match(/waid=(\d+)/)?.[1] || 
-                     contact.vcard?.match(/TEL[^:]*:([\+\d\-\s\(\)]+)/i)?.[1]?.replace(/[^0-9]/g, '');
-        contactName = contact.displayName || contact.vcard?.match(/FN:(.*)/i)?.[1]?.trim();
+                     contact.vcard?.match(/TEL[^:]*:([\+\d\-\s\(\)]+)/i)?.[1]?.replace(/[^0-9]/g, '') ||
+                     contact.phoneNumber?.replace(/[^0-9]/g, '');
+        contactName = contact.displayName || contact.pushName || contact.vcard?.match(/FN:(.*)/i)?.[1]?.trim() || "User";
+        
+        // Add logging
+        console.log("Contact received:", {phoneNumber, contactName, rawContact: contact});
       } 
       // Handle contactsArrayMessage type
       else if (ms.message?.contactsArrayMessage) {
@@ -49,12 +53,20 @@ async function handleInvite(zk, ms, conf) {
 
       if (phoneNumber) {
         // Format phone number
-        if (!phoneNumber.startsWith('254')) {
-          if (phoneNumber.startsWith('+254')) {
-            phoneNumber = phoneNumber.substring(1);
-          } else if (phoneNumber.startsWith('0')) {
+        if (phoneNumber) {
+          // Remove any non-numeric characters
+          phoneNumber = phoneNumber.replace(/[^0-9]/g, '');
+          
+          // Convert to international format
+          if (phoneNumber.startsWith('0')) {
             phoneNumber = '254' + phoneNumber.substring(1);
+          } else if (phoneNumber.startsWith('+')) {
+            phoneNumber = phoneNumber.substring(1);
+          } else if (!phoneNumber.startsWith('254')) {
+            phoneNumber = '254' + phoneNumber;
           }
+          
+          console.log("Formatted phone number:", phoneNumber);
         }
 
         // Save contact to database
