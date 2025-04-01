@@ -16,7 +16,9 @@ async function saveContact(phoneNumber) {
 }
 
 async function handleInvite(zk, ms, conf) {
-  if (conf.INVITE_AUTO !== 'yes') return;
+  if (global.INVITE_AUTO !== 'yes') return;
+  
+  console.log("Invite handler triggered with auto:", global.INVITE_AUTO);
 
   try {
     const msg = ms.message;

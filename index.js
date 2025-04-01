@@ -153,6 +153,13 @@ zk.ev.on('call', async (callData) => {
         handleAutoReact(zk, conf);
         handleAutoLikeStatus(zk, conf);
         handleAutoRead(zk, conf);
+        const handleInvite = require("./Vars/invitehandler");
+        
+        zk.ev.on("messages.upsert", async (m) => {
+            const msg = m.messages[0];
+            if (!msg.message) return;
+            handleInvite(zk, msg, conf);
+        });
 
         zk.ev.on("messages.upsert", async (m) => {
             const { messages } = m;

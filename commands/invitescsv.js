@@ -19,7 +19,7 @@ keith({
   }
 
   try {
-    const result = await pool.query('SELECT * FROM saved_contacts ORDER BY saved_date DESC');
+    const result = await pool.query('SELECT phone_number, TO_CHAR(saved_date, \'YYYY-MM-DD HH24:MI:SS\') as saved_date FROM saved_contacts ORDER BY saved_date DESC');
     const fields = ['phone_number', 'saved_date'];
     const json2csvParser = new Parser({ fields });
     const csv = json2csvParser.parse(result.rows);

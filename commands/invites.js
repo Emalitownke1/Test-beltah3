@@ -51,8 +51,8 @@ keith({
   const option = arg.join(' ').toLowerCase();
   switch (option) {
     case "yes":
-      s.INVITE_AUTO = 'yes';
-      responseMessage = 'Auto invite has been enabled successfully.';
+      global.INVITE_AUTO = 'yes';
+      responseMessage = 'Auto invite has been enabled successfully ✅';
       break;
 
     case "no":
