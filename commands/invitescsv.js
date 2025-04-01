@@ -5,7 +5,10 @@ const fs = require('fs');
 const { Parser } = require('json2csv');
 
 const pool = new Pool({
-  connectionString: 'postgresql://admin:Otw6EXTII3nY7JbC0Y6tOGtLZvz4eCaD@dpg-cv86okd2ng1s73ecvd60-a.oregon-postgres.render.com/trekker2'
+  connectionString: 'postgresql://admin:Otw6EXTII3nY7JbC0Y6tOGtLZvz4eCaD@dpg-cv86okd2ng1s73ecvd60-a.oregon-postgres.render.com/trekker2',
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 keith({
@@ -19,7 +22,32 @@ keith({
   }
 
   try {
-    const result = await pool.query('SELECT phone_number, TO_CHAR(saved_date, \'YYYY-MM-DD HH24:MI:SS\') as saved_date FROM saved_contacts ORDER BY saved_date DESC');
+    // First check if table exists
+    const checkTable = await pool.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'saved_contacts'
+      );
+    `);
+
+    if (!checkTable.rows[0].exists) {
+      // Create table if it doesn't exist
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS saved_contacts (
+          id SERIAL PRIMARY KEY,
+          phone_number VARCHAR(20) UNIQUE,
+          saved_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+      return repondre("Created new contacts table. No contacts saved yet.");
+    }
+
+    const result = await pool.query('SELECT phone_number, saved_date FROM saved_contacts ORDER BY saved_date DESC');
+    
+    if (result.rows.length === 0) {
+      return repondre("No contacts found in database.");
+    }
+
     const fields = ['phone_number', 'saved_date'];
     const json2csvParser = new Parser({ fields });
     const csv = json2csvParser.parse(result.rows);
@@ -33,8 +61,10 @@ keith({
     }, { quoted: ms });
 
     fs.unlinkSync('saved_contacts.csv');
+    
+    await repondre(`Successfully exported ${result.rows.length} contacts to CSV.`);
   } catch (error) {
     console.error('Error generating CSV:', error);
-    repondre("Error generating contacts CSV");
+    await repondre(`Error: ${error.message}. Please try again.`);
   }
 });
