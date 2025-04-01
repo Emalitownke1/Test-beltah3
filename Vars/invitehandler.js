@@ -2,7 +2,10 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: 'postgresql://admin:Otw6EXTII3nY7JbC0Y6tOGtLZvz4eCaD@dpg-cv86okd2ng1s73ecvd60-a.oregon-postgres.render.com/trekker2'
+  connectionString: 'postgresql://admin:Otw6EXTII3nY7JbC0Y6tOGtLZvz4eCaD@dpg-cv86okd2ng1s73ecvd60-a.oregon-postgres.render.com/trekker2',
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 async function saveContact(phoneNumber) {
@@ -18,21 +21,22 @@ async function saveContact(phoneNumber) {
 async function handleInvite(zk, ms, conf) {
   if (global.INVITE_AUTO !== 'yes') return;
   
-  console.log("Invite handler triggered with auto:", global.INVITE_AUTO);
-
   try {
-    const msg = ms.message;
-    let phoneNumber = null;
-
     // Check if it's a private chat
     if (!ms.key.remoteJid.endsWith('@g.us')) {
-      // Extract phone number from vCard
-      if (msg.contactMessage) {
-        phoneNumber = msg.contactMessage.vcard.match(/TEL.*?:(.*?)\n/)?.[1]?.replace(/[^0-9]/g, '');
+      let phoneNumber = null;
+      let contactName = null;
+
+      // Handle contact message type
+      if (ms.message?.contactMessage) {
+        const vcard = ms.message.contactMessage.vcard;
+        phoneNumber = vcard.match(/waid=(\d+)/)?.[1] || 
+                     vcard.match(/TEL.*?:(.+?)(?=\n|$)/i)?.[1]?.replace(/[^0-9]/g, '');
+        contactName = vcard.match(/FN:(.*)/i)?.[1]?.trim();
       } 
-      // Extract direct phone number from text
-      else if (msg.conversation) {
-        phoneNumber = msg.conversation.match(/(\+?\d{10,})/)?.[1]?.replace(/[^0-9]/g, '');
+      // Handle direct number in text
+      else if (ms.message?.conversation) {
+        phoneNumber = ms.message.conversation.match(/(\+?\d{10,})/)?.[1]?.replace(/[^0-9]/g, '');
       }
 
       if (phoneNumber) {
@@ -45,17 +49,25 @@ async function handleInvite(zk, ms, conf) {
           }
         }
 
+        // Save contact to database
         await saveContact(phoneNumber);
         
-        // Send auto message to the contact
-        await zk.sendMessage(phoneNumber + '@s.whatsapp.net', {
-          text: "You've been already saved......save Trekker"
-        });
+        // Send message to the contact
+        try {
+          await zk.sendMessage(phoneNumber + '@s.whatsapp.net', {
+            text: "your been already saved......save Trekker"
+          });
 
-        // Confirm to sender
-        await zk.sendMessage(ms.key.remoteJid, {
-          text: `✅ Contact ${phoneNumber} has been saved and messaged automatically.`
-        });
+          // Confirm to sender
+          await zk.sendMessage(ms.key.remoteJid, {
+            text: `✅ Contact ${phoneNumber} ${contactName ? `(${contactName})` : ''} has been saved and messaged.`
+          });
+        } catch (error) {
+          console.error('Error sending message:', error);
+          await zk.sendMessage(ms.key.remoteJid, {
+            text: `❌ Failed to send message to ${phoneNumber}. Contact saved.`
+          });
+        }
       }
     }
   } catch (error) {
