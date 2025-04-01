@@ -30,13 +30,22 @@ async function handleInvite(zk, ms, conf) {
       // Handle contact message type
       if (ms.message?.contactMessage) {
         const contact = ms.message.contactMessage;
+        console.log("Full contact message structure:", JSON.stringify(ms.message, null, 2));
+        console.log("Contact vCard:", contact.vcard);
+        
+        // Parse phone number from vCard
         phoneNumber = contact.vcard?.match(/waid=(\d+)/)?.[1] || 
                      contact.vcard?.match(/TEL[^:]*:([\+\d\-\s\(\)]+)/i)?.[1]?.replace(/[^0-9]/g, '') ||
                      contact.phoneNumber?.replace(/[^0-9]/g, '');
         contactName = contact.displayName || contact.pushName || contact.vcard?.match(/FN:(.*)/i)?.[1]?.trim() || "User";
         
-        // Add logging
-        console.log("Contact received:", {phoneNumber, contactName, rawContact: contact});
+        console.log("Extracted contact info:", {
+          phoneNumber,
+          contactName,
+          displayName: contact.displayName,
+          pushName: contact.pushName,
+          rawVcard: contact.vcard
+        });
       } 
       // Handle contactsArrayMessage type
       else if (ms.message?.contactsArrayMessage) {
