@@ -1,0 +1,53 @@
+version: "3"
+
+services:
+  web:
+    build: .
+    environment:
+      - PREFIX=.
+      - AUTO_READ_STATUS=yes
+      - GREET=no
+      - AUTO_LIKE_STATUS=yes
+      - GITHUB_API=
+      - YOYOMEDIA_API_KEY=fe5714fe99697f402b7ebffb1a04336b7b197336b0f1fc466097e0afdfddee86
+      - AUTOBIO=no
+      - CHATBOT=no
+      - TALKING_BOT=no
+      - AUTO_DOWNLOAD_STATUS=no
+      - PM_PERMIT=yes
+      - AUTO_STATUS_MSG=viewed ✅✅
+      - AUTO_STATUS_REPLY=no
+      - ANTICALL_MSG="> BELTAH-MD on board ||No calls allowed."
+      - BOT_NAME=BELTAH-MD
+      - GROUP_CONTROL=no
+      - PUBLIC_MODE=yes
+      - HEROKU_API_KEY=
+      - HEROKU_APP_NAME=
+      - SESSION_ID=
+      - OWNER_NAME=true
+      - URL=https://files.catbox.moe/nxl93r.jpg
+      - AUTO_READ_MESSAGES=no
+      - NUMERO_OWNER=254704897825
+      - WARN_COUNT=10
+      - STARTING_BOT_MESSAGE=yes
+      - PRESENCE=3
+      - ANTI_DELETE_MESSAGE=yes
+      - ANTICALL=no
+      - AUTO_BLOCK=no
+      - AUTO_REACTION=no
+    scale:
+      count: 1
+      memory: 512
+    ports:
+      - 3000:3000
+    health:
+      path: /
+      interval: 10
+      timeout: 5
+      grace: 5
+    command: ["npm", "start"]
+
+resources:
+  database:
+    type: postgres
+    plan: essential-0
