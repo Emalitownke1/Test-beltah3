@@ -1,10 +1,3 @@
-apiVersion: core.choreo.dev/v1beta1
-kind: ComponentConfig
-spec:
-  inbound:
-    - name: Todolist Service
-      port: 8080
-      type: REST
-      networkVisibility: Public
-      context: /todolist
-      schemaFilePath: openapi.yaml
+apiVersion: core.choreo.dev/v1beta1 kind: ComponentConfig spec: inbound: - name: Todolist Service port: 8080 type: REST networkVisibility: Public context: /todolist schemaFilePath: openapi.yaml
+
+component: name: BELTAH-MD-BOT  # Updated component name runtime: docker  # Using Docker-based deployment type: web-service  # Ensure compatibility with Choreo.dev source: type: git  # Could also be "dockerhub" if pulling from Docker Hub repository: https://github.com/Beltah254/BELTAH-MD  # Updated repository URL branch: main  # Set the branch you want to deploy from build: dockerfile: Dockerfile  # Ensure your repo has a valid Dockerfile deploy: type: container  # Deploying as a container ports: - 8080  # Choreo-compatible port env: - name: PORT value: "8080" - name: PREFIX value: "." - name: AUTO_READ_STATUS value: "yes" - name: GREET value: "no" - name: AUTO_LIKE_STATUS value: "yes" - name: GITHUB_API value: "" - name: YOYOMEDIA_API_KEY value: "fe5714fe99697f402b7ebffb1a04336b7b197336b0f1fc466097e0afdfddee86" - name: AUTOBIO value: "no" - name: CHATBOT value: "no" - name: TALKING_BOT value: "no" - name: AUTO_DOWNLOAD_STATUS value: "no" - name: PM_PERMIT value: "yes" - name: AUTO_STATUS_MSG value: "viewed ✅✅" - name: AUTO_STATUS_REPLY value: "no" - name: ANTICALL_MSG value: "> BELTAH-MD on board ||No calls allowed." - name: BOT_NAME value: "BELTAH-MD" - name: GROUP_CONTROL value: "no" - name: PUBLIC_MODE value: "yes" - name: SESSION_ID value: "" - name: OWNER_NAME value: "true" - name: URL value: "https://files.catbox.moe/nxl93r.jpg" - name: AUTO_READ_MESSAGES value: "no" - name: NUMERO_OWNER value: "254704897825" - name: WARN_COUNT value: "10" - name: STARTING_BOT_MESSAGE value: "yes" - name: PRESENCE value: "3" - name: ANTI_DELETE_MESSAGE value: "yes" - name: ANTICALL value: "no" - name: AUTO_BLOCK value: "no" - name: AUTO_REACTION value: "no" scaling: minReplicas: 1  # Ensure minimal downtime maxReplicas: 3 storage: - name: postgres-db type: database provider: choreo size: 1GB  # Choreo-compatible storage setup
